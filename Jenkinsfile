@@ -5,7 +5,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out Risk-Aware Deployment Pipeline'
+                echo 'Checking out source code'
             }
         }
 
@@ -26,14 +26,34 @@ pipeline {
                 sh 'npm run build'
             }
         }
+
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t risk-aware-dashboard:${BUILD_NUMBER} .'
+            }
+        }
+
+        stage('Docker Deploy') {
+            steps {
+                sh '''
+                    docker rm -f risk-aware-dashboard || true
+
+                    docker run -d \
+                    --name risk-aware-dashboard \
+                    --restart unless-stopped \
+                    -p 3000:3000 \
+                    risk-aware-dashboard:${BUILD_NUMBER}
+                '''
+            }
+        }
     }
 
     post {
         success {
-            echo 'Project built successfully!'
+            echo 'Docker application deployed successfully!'
         }
         failure {
-            echo 'Pipeline failed. Check the console output.'
+            echo 'Pipeline failed. Check Jenkins console output.'
         }
     }
 }
